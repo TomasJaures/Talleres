@@ -15,12 +15,15 @@ public class HashingLab {
         }
     }
 
-
+    /**
+     * Clase HashTable con metodo de "Chaining"
+     * Chaining: Cada indice tiene una lista enlazada en caso de colision.
+     */
     static class HashTableChaining {
         private List<List<Pair>> table;
-        private int size;
-        private int count;
-        private int collisions;
+        private int size; //Tamaño de tabla sin contar tamaño de buckets
+        private int count; //Cantidad de elementos insertados en la tabla
+        private int collisions; //Cantidad de veces que un elemento comparte el mismo indice que otro
         private String hashStrategy;
 
         public HashTableChaining(int size, String hashStrategy) {
@@ -30,13 +33,18 @@ public class HashingLab {
             this.collisions = 0;
             this.table = new ArrayList<>();
             for (int i = 0; i < size; i++) {
-                table.add(new LinkedList<>());
+                table.add(new LinkedList<>()); //Listas enlazadas (buckets) a cada indice de la tabla
             }
         }
 
+        /**
+         * hashSum() es un metodo que se encarga de sumar los valores unicode de un caracter para luego aplicarle un MOD por el tamaño de la tabla, de esta manera garantizando que el nuevo valor caiga dentro de esta misma
+         * 
+         * Desventaja: Al unicamente sumar los valores unicode, no se considera el orden de estos, habiendo casos donde llaves como "abc" y "cba" den el mismo indice, provocando muchas mas colisiones.
+         * @param key
+         * @return Valor sumado
+         */
         private int hashSum(String key) {
-            //TODO: Crear codigo
-            //Solo suma
             int sum = 0;
             for (char c : key.toCharArray()) {
                 sum += c;
@@ -44,6 +52,11 @@ public class HashingLab {
             return Math.floorMod(sum, size); //"abc" = "cba"
         }
 
+        /**
+         * hashPolynomial(): Es un metodo que se encarga de sumar cada valor unicode de la llave pero con una base distinta que va cambiando a medidad que transcurre el string, de esta manera evitando problemas con el orden
+         * @param key
+         * @return Valor sumado
+         */
         private int hashPolynomial(String key) {
             //Considera orden
             int h = 0;
@@ -54,6 +67,9 @@ public class HashingLab {
             return h;
         }
 
+        /**
+         * Funcion hash
+         */
         private int hash(String key) {
             if (hashStrategy.equals("sum")) {
                 return hashSum(key);
@@ -63,42 +79,67 @@ public class HashingLab {
             throw new IllegalArgumentException("Unknown hash strategy");
         }
 
+        /**
+         * insert(): El metodo se encarga de insertar un dato en la tabla
+         * 
+         * Para esto debe realizar varias acciones:
+         * 
+         * - Aplicar La funcion hash a la clave ingresada
+         * - Comprobar si la clave ya fue usada (Y sobreescribir el valor anterior de ser asi)
+         * - Verificar y sumar si hay alguna colision al momento de la insercion
+         */
         public void insert(String key, int value) {
-            //TODO: asdas
             int idx = hash(key);
-            List<Pair> bucket = table.get(idx);
+            List<Pair> bucket = table.get(idx); //Bucket: Lista enlazada
             for (Pair pair : bucket) {
                 if (pair.key.equals(key)) {
-                    pair.value = value;
+                    pair.value = value; //sobreescribir si la LLAVE ya esta usada
                     return;
                 }
             }
-            if (!bucket.isEmpty()) collisions++;
-            bucket.add(new Pair(key, value));
-            count++;
+            if (!bucket.isEmpty()) collisions++; //Sumar una colision si el indice ya habia salido antes
+            bucket.add(new Pair(key, value)); //Añadir valor a la lista enlazada
+            count++; //Sumar cantidad de elementos
         }
 
+        /**
+         * search(): Metodo encargado de buscar un valor
+         * 
+         * Para esto, se aplica la funcion hash a la LLAVE obteniendo el indice, luego, se busca en el BUCKET correspondiente si algun valor de estos coincide con la clave
+         * @param key
+         * @return
+         */
         public Integer search(String key) {
             int idx = hash(key);
+            //Buscar PAR del BUCKET que su LLAVE coincida con la llave ingresada
             for (Pair p : table.get(idx)) {
                 if (p.key.equals(key)) return p.value;
             }
             return null;
         }
 
+        /**
+         * delete(): Metodo encargado de eliminar un Par
+         * 
+         * Se aplica el mismo concepto que con search(), solo que en este caso se elimina el PAR y notifica de ser asi (true o false).
+         */
         public boolean delete(String key) {
             int idx = hash(key);
             List<Pair> current = table.get(idx);
             for (int i = 0; i < current.size() ; i++) {
+                //Buscar PAR del BUCKET que su LLAVE coincida con la llave ingresada
                 if (current.get(i).key.equals(key)) {
-                    current.remove(i);
-                    count--;
+                    current.remove(i); //Elimina PAR
+                    count--; //Descuenta 1 a la cantidad de elementos en la tabla
                     return true;
                 }
             }
             return false;
         }
 
+        /**
+         * @return factor de carga, indica que tan llena esta la tabla
+         */
         public double loadFactor() {
             return (double) count / size;
         }
@@ -111,6 +152,9 @@ public class HashingLab {
             return used;
         }
 
+        /**
+         * @return El BUCKET mas lleno de todos
+         */
         public int maxBucketSize() {
             int max = 0;
             for (List<Pair> bucket : table) {
